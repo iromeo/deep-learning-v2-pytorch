@@ -42,15 +42,13 @@ class NeuralNetwork(object):
         delta_weights_h_o = np.zeros(self.weights_hidden_to_output.shape)
 
         for X, y in zip(features, targets):
-            # for convenience represent X vector as a Nx1 matix
-            x = X[None, :]
 
             # forward pass 
-            final_outputs, hidden_outputs = self.forward_pass_train(x)
+            final_outputs, hidden_outputs = self.forward_pass_train(X)
 
             # backpropagation
             delta_weights_i_h, delta_weights_h_o = self.backpropagation(
-                final_outputs, hidden_outputs, x, y, delta_weights_i_h, delta_weights_h_o
+                final_outputs, hidden_outputs, X, y, delta_weights_i_h, delta_weights_h_o
             )
 
         # update weights    
@@ -98,11 +96,20 @@ class NeuralNetwork(object):
             delta_weights_h_o: change in weights from hidden to output layers
 
         """
+        
+        # We could pass X[None, :] into forward/backpropagation steps and get nice generic code,
+        # but project assistant unit tests will fail for such case. So assume, that `X` was a
+        # vector and thus we exapect X and hidden_outputs to be vectors, not matrix.
+        assert len(X.shape) == 1
+        assert len(hidden_outputs.shape) == 1
 
         # ### Backward pass ###
 
         # Output error: difference between desired target and actual output.
         error = y - final_outputs
+        if len(error.shape) == 1:
+            error = error[None, :]
+            
         output_error_term = error  # activation function is f(x), f'(x) = 1
 
         # Backpropagate error:
@@ -111,10 +118,10 @@ class NeuralNetwork(object):
         hidden_error_term = hidden_error * self.activation_function_output_2_derivative(hidden_outputs)
 
         # Weight step (input to hidden)
-        delta_weights_i_h += np.dot(X.T, hidden_error_term)
+        delta_weights_i_h += np.dot(X[:, None], hidden_error_term)
 
         # Weight step (hidden to output)
-        delta_weights_h_o += np.dot(hidden_outputs.T, output_error_term)
+        delta_weights_h_o += np.dot(hidden_outputs[:, None], output_error_term)
 
         return delta_weights_i_h, delta_weights_h_o
 
